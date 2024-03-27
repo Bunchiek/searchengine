@@ -12,15 +12,19 @@ spring:
       dialect: org.hibernate.dialect.MySQL8Dialect
     hibernate:
       ddl-auto: create
-    show-sql: true
+    show-sql: false
 
 # example values
 
 indexing-settings:
   siteInfos:
     - url:  http://playback.ru/
-      name: playback.ру
+      name: playback.ru
     - url:  https://et-cetera.ru/mobile/
       name: et-cetera.ru
-#    - url: https://www.playback.ru
-#      name: PlayBack.Ru
+
+
+#    - url: https://volochek.life/
+#      name: volochek.life
+#    - url: https://dombulgakova.ru/
+#      name: dombulgakova.ru

@@ -1,6 +1,7 @@
 package searchengine.services;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
@@ -9,23 +10,34 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import searchengine.config.SitesList;
 import searchengine.model.Page;
 import searchengine.model.Site;
+import searchengine.model.Status;
+import searchengine.repositoies.IndexRepository;
+import searchengine.repositoies.LemmaRepository;
 import searchengine.repositoies.PageRepository;
+import searchengine.repositoies.SiteRepository;
 
 import java.io.IOException;
+import java.net.URL;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.RecursiveTask;
 
+@Service
+@RequiredArgsConstructor
 public class SiteMapGeneratorService extends RecursiveTask<List<Page>> {
     private Page page;
     private Site site;
-    private PageRepository pageRepository;
+    private IndexingServiceImpl indexingService;
     protected static List<Page> badResponseSites = new ArrayList<>();
-    public SiteMapGeneratorService(Page page, Site site, PageRepository repository) {
+
+    public SiteMapGeneratorService(Page page, Site site, IndexingServiceImpl indexingService) {
         this.page = page;
         this.site = site;
-        this.pageRepository = repository;
+        this.indexingService  = indexingService;
     }
 
     @Override
@@ -34,7 +46,7 @@ public class SiteMapGeneratorService extends RecursiveTask<List<Page>> {
         List<Page> list = webTree(url);
         List<SiteMapGeneratorService> subTask = new LinkedList<>();
         for (Page page : list) {
-            SiteMapGeneratorService task = new SiteMapGeneratorService(page, site, pageRepository);
+            SiteMapGeneratorService task = new SiteMapGeneratorService(page, site, indexingService);
             task.fork();
             subTask.add(task);
             this.page.addChild(page);
@@ -60,29 +72,36 @@ public class SiteMapGeneratorService extends RecursiveTask<List<Page>> {
                         temp = temp + "/";
                     }
                     if (temp.contains(url) && !temp.contains("#")) {
-                        List<Page> pageList = pageRepository.findByPath(temp.substring(temp.indexOf("/",8)));
-                        if (pageList.isEmpty()) {
-                            try {
-                                Thread.sleep(200);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
-                            Connection.Response response2 = Jsoup.connect(temp).execute();
-                            if (200 == response2.statusCode()) {
-                                doc = response2.parse();
-                                list.add(new Page(temp, response2.statusCode(), doc.text(), site));
-                                pageRepository.save(new Page(temp.substring(temp.indexOf("/",8)), response2.statusCode(), doc.text(), site));
-                            }
+                        URL path = new URL(temp);
+                        Page page = indexingService.getPageRepository().findByPath(path.getPath());
+                        if (page == null) {
+                            list = savePage(temp, doc, path);
                         }
                     }
                 }
             }
         } catch (HttpStatusException e) {
             badResponseSites.add((new Page(temp, e.getStatusCode(), "Ошибка чтения страницы", site)));
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             System.out.println(ex.getMessage());
         }
         return list;
+    }
+
+    private List<Page> savePage(String path, Document document, URL url) throws IOException, InterruptedException {
+        List<Page> result = new ArrayList<>();
+        Thread.sleep(200);
+        Connection.Response response = Jsoup.connect(path).execute();
+        if (200 == response.statusCode()) {
+            document = response.parse();
+            result.add(new Page(path, response.statusCode(), document.html(), site));
+            indexingService.indexPage(path);
+            indexingService.getSiteRepository().updateSiteSetTimeForId(LocalDateTime.now(), site.getId());
+            if (indexingService.getSiteRepository().findById(site.getId()).get().getStatus().equals(Status.FAILED)) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        return result;
     }
 }
 

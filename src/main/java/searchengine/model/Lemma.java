@@ -1,7 +1,13 @@
 package searchengine.model;
 
-import javax.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
+import javax.persistence.*;
+import java.util.List;
+
+@Setter
+@Getter
 @Entity
 @Table(name = "lemma")
 public class Lemma {
@@ -12,39 +18,10 @@ public class Lemma {
     private String lemma;
     @Column(nullable = false)
     private int frequency;
-    @ManyToOne()
+    @ManyToOne
     @JoinColumn(name = "site_id", nullable = false)
     private Site site;
+    @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
+    private List<Index> indexes;
 
-    public Site getSite() {
-        return site;
-    }
-
-    public void setSite(Site site) {
-        this.site = site;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getLemma() {
-        return lemma;
-    }
-
-    public void setLemma(String lemma) {
-        this.lemma = lemma;
-    }
-
-    public int getFrequency() {
-        return frequency;
-    }
-
-    public void setFrequency(int frequency) {
-        this.frequency = frequency;
-    }
 }

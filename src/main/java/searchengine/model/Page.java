@@ -23,9 +23,16 @@ public class Page {
     private int code;
     @Column(columnDefinition = "MEDIUMTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",nullable = false)
     private String content;
-    @ManyToOne()
+    @ManyToOne
     @JoinColumn(name = "site_id", nullable = false)
     private Site site;
+    @OneToMany(mappedBy = "page", cascade = CascadeType.ALL)
+    private List<Index> indexes;
+
+
+
+
+
     @Transient
     private List<Page> children = new ArrayList<>();
     public Page() {

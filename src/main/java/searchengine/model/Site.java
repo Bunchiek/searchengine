@@ -27,6 +27,18 @@ public class Site {
     private String url;
     @Column(nullable = false)
     private String name;
+    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL)
+    private List<Page> pages;
+    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL)
+    private List<Lemma> lemmas;
 
+    public Site() {
+    }
 
+    public Site(Status status, LocalDateTime statusTime, String url, String name) {
+        this.status = status;
+        this.statusTime = statusTime;
+        this.url = url;
+        this.name = name;
+    }
 }
