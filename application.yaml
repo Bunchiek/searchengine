@@ -18,13 +18,56 @@ spring:
 
 indexing-settings:
   siteInfos:
-    - url:  http://playback.ru/
-      name: playback.ru
-    - url:  https://et-cetera.ru/mobile/
-      name: et-cetera.ru
+        - url: https://nikoartgallery.com/
+          name: nikoartgallery.com
+
+#        - url: https://ipfran.ru/
+#          name: ipfran.ru
+
+      #520 + a lot of errors
+          #169
+
+#        - url:  http://playback.ru/
+#          name: playback.ru
+#       4225 и завис
+#        - url: https://volochek.life/
+#          name: volochek.life
+          #4k+ full memory
+
+#        - url: https://radiomv.ru/
+#          name: radiomv.ru
+  #0
 
 
-#    - url: https://volochek.life/
-#      name: volochek.life
-#    - url: https://dombulgakova.ru/
-#      name: dombulgakova.ru
+
+
+
+#        - url:  https://dimonvideo.ru/
+#          name: dimonvideo.ru
+          #   260+ 30k lemmas
+
+
+
+#        - url:  https://et-cetera.ru/mobile/
+#          name: et-cetera.ru
+  #ochen dolgo hz
+
+#      - url: https://dombulgakova.ru/
+#        name: dombulgakova.ru
+        #1300+ a lot of erros and memory use
+
+
+
+
+
+
+#        - url: https://www.svetlovka.ru/
+#          name: svetlovka.ru
+#      2000+ завис
+
+
+
+
+
+
+

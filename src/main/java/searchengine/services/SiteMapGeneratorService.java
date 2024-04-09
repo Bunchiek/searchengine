@@ -1,8 +1,6 @@
 package searchengine.services;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
@@ -10,98 +8,115 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import searchengine.config.SitesList;
-import searchengine.model.Page;
-import searchengine.model.Site;
-import searchengine.model.Status;
+import searchengine.model.*;
 import searchengine.repositoies.IndexRepository;
 import searchengine.repositoies.LemmaRepository;
 import searchengine.repositoies.PageRepository;
 import searchengine.repositoies.SiteRepository;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.RecursiveTask;
 
 @Service
 @RequiredArgsConstructor
-public class SiteMapGeneratorService extends RecursiveTask<List<Page>> {
+public class SiteMapGeneratorService extends RecursiveAction {
     private Page page;
     private Site site;
-    private IndexingServiceImpl indexingService;
-    protected static List<Page> badResponseSites = new ArrayList<>();
+    private PageRepository pageRepository;
+    private SiteRepository siteRepository;
+    private LemmaRepository lemmaRepository;
+    private IndexRepository indexRepository;
+    private final LemmaConverter lemmaConverter = new LemmaConverter();
 
-    public SiteMapGeneratorService(Page page, Site site, IndexingServiceImpl indexingService) {
+    public SiteMapGeneratorService(Page page, Site site, PageRepository pageRepository, SiteRepository siteRepository, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
         this.page = page;
         this.site = site;
-        this.indexingService  = indexingService;
+        this.pageRepository = pageRepository;
+        this.siteRepository = siteRepository;
+        this.lemmaRepository = lemmaRepository;
+        this.indexRepository = indexRepository;
     }
 
     @Override
-    protected List<Page> compute() {
-        String url = page.getPath();
-        List<Page> list = webTree(url);
+    protected void compute() {
+        List<Page> list = webTree(page);
         List<SiteMapGeneratorService> subTask = new LinkedList<>();
         for (Page page : list) {
-            SiteMapGeneratorService task = new SiteMapGeneratorService(page, site, indexingService);
+            SiteMapGeneratorService task = new SiteMapGeneratorService(page, site, pageRepository, siteRepository, lemmaRepository, indexRepository);
             task.fork();
             subTask.add(task);
             this.page.addChild(page);
         }
         for (SiteMapGeneratorService task : subTask) {
-            list.addAll(task.join());
+            task.join();
         }
-        return list;
     }
 
-    private List<Page> webTree(String url) {
+    private  List<Page> webTree(Page page) {
         Document doc = null;
         List<Page> list = new ArrayList<>();
         String temp = "";
         try {
-            Connection.Response response = Jsoup.connect(url).execute();
+            URL path = new URL(page.getPath());
+            Thread.sleep(1000);
+            Connection.Response response = Jsoup.connect(page.getPath()).execute();
             if (200 == response.statusCode()) {
                 doc = response.parse();
+                page.setPath(path.getPath());
+                page.setSite(site);
+                page.setCode(response.statusCode());
+                page.setContent(doc.html());
+                testSave(page);
+                siteRepository.updateSiteSetTimeForId(LocalDateTime.now(), site.getId());
                 Elements elements = doc.select("a");
                 for (Element element : elements) {
                     temp = element.attr("abs:href");
                     if (!temp.endsWith("/")) {
                         temp = temp + "/";
                     }
-                    if (temp.contains(url) && !temp.contains("#")) {
-                        URL path = new URL(temp);
-                        Page page = indexingService.getPageRepository().findByPath(path.getPath());
-                        if (page == null) {
-                            list = savePage(temp, doc, path);
+                    if (temp.contains(path.getHost()) && !temp.contains("#")) {
+                        if (!Page.urls.contains(temp)) {
+                            Page.urls.add(temp);
+                            list.add(new Page(temp));
                         }
                     }
                 }
             }
-        } catch (HttpStatusException e) {
-            badResponseSites.add((new Page(temp, e.getStatusCode(), "Ошибка чтения страницы", site)));
-        } catch (IOException | InterruptedException ex) {
-            System.out.println(ex.getMessage());
+        } catch (HttpStatusException ignored) {
+//            System.out.println(ignored.getStatusCode() + " " + temp);
+        } catch (IOException | InterruptedException | ArrayIndexOutOfBoundsException ex) {
+            System.out.println(ex.getMessage() + " " + temp);
         }
         return list;
     }
 
-    private List<Page> savePage(String path, Document document, URL url) throws IOException, InterruptedException {
-        List<Page> result = new ArrayList<>();
-        Thread.sleep(200);
-        Connection.Response response = Jsoup.connect(path).execute();
-        if (200 == response.statusCode()) {
-            document = response.parse();
-            result.add(new Page(path, response.statusCode(), document.html(), site));
-            indexingService.indexPage(path);
-            indexingService.getSiteRepository().updateSiteSetTimeForId(LocalDateTime.now(), site.getId());
-            if (indexingService.getSiteRepository().findById(site.getId()).get().getStatus().equals(Status.FAILED)) {
-                Thread.currentThread().interrupt();
-            }
+    private  void testSave(Page page) {
+        if (pageRepository.findFirstByPath(page.getPath()) == null) {
+            pageRepository.save(page);
+            populatingTable(page);
         }
-        return result;
+    }
+    private  void populatingTable(Page page) {
+        Map<String, Long> map = lemmaConverter.textToLemma(page.getContent());
+        for (Map.Entry<String, Long> lemmaMap : map.entrySet()) {
+            Lemma lemma = lemmaRepository.findFirstByLemmaAndSite(lemmaMap.getKey(), site);
+            if (lemma == null) {
+                lemma = new Lemma();
+                lemma.setSite(site);
+                lemma.setLemma(lemmaMap.getKey());
+                lemma.setFrequency(1);
+                lemmaRepository.save(lemma);
+            } else {
+                lemmaRepository.updateLemmaFrequency(lemma.getFrequency()+1,lemma.getId());
+            }
+            Index index = new Index(lemma, page, lemmaMap.getValue().intValue());
+            indexRepository.save(index);
+        }
     }
 }
 

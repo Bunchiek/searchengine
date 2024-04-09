@@ -24,19 +24,22 @@ public class Main {
 
         String test = "ыфвфывфыв";
 
-
-        String[] particlesNames = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
-
-        String text = "https://et-cetera.ru/mobile/performance/";
+        System.out.println(luceneMorph.checkString(test));
+        System.out.println(luceneMorph.getMorphInfo(test));
+//
+//
+//        String[] particlesNames = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
+//
+//        String text = "https://et-cetera.ru/mobile/performance/";
 
 //        ;
 //        System.out.println(luceneMorph.checkString(test));
 //        System.out.println(luceneMorph.getMorphInfo(test));
 
-        URL url = new URL(text);
-
-        System.out.println(url.getProtocol() + "://" + url.getHost() +"/");
-        System.out.println(url);
+//        URL url = new URL(text);
+//
+//        System.out.println(url.getProtocol() + "://" + url.getHost() +"/");
+//        System.out.println(((double) 23/100) * 90);
 
 
 

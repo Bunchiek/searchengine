@@ -18,7 +18,7 @@ public interface PageRepository extends JpaRepository<Page,Integer> {
 
     List<Page> findBySite(Site site);
 
-    Page findByPath(@Param("path") String path);
+    Page findFirstByPath(@Param("path") String path);
     @Transactional
     @Modifying
     void deleteBySite(Site site);

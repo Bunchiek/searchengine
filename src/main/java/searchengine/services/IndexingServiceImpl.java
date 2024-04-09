@@ -15,12 +15,17 @@ import searchengine.repositoies.IndexRepository;
 import searchengine.repositoies.LemmaRepository;
 import searchengine.repositoies.PageRepository;
 import searchengine.repositoies.SiteRepository;
+
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 
 @Service
@@ -32,12 +37,17 @@ public class IndexingServiceImpl implements IndexingService {
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    private ForkJoinPool pool = new ForkJoinPool();
+    private LemmaConverter lemmaConverter = new LemmaConverter();
     private final SitesList sitesList;
+    private List<Thread> threads = new ArrayList<>();
 
     @Override
     public Result startIndexing() {
         Result result = new Result();
         List<Site> listOfSites = siteRepository.findAll();
+        Page.urls.clear();
         if (!listOfSites.isEmpty()) {
             for (Site site : listOfSites) {
                 if (site.getStatus().equals(Status.INDEXING)) {
@@ -58,14 +68,21 @@ public class IndexingServiceImpl implements IndexingService {
             siteToIndex.setName(siteInfo.getName());
             siteToIndex.setStatus(Status.INDEXING);
             siteRepository.save(siteToIndex);
+
+//            executor.submit(()->indexing(siteToIndex));
+//            executor.shutdown();
+
             new Thread(() -> indexing(siteToIndex)).start();
         }
+
+
         result.setResult(true);
         return result;
     }
 
     @Override
     public Result stopIndexing() {
+        executor.shutdown();
         Result result = new Result();
         result.setResult(false);
         List<Site> listOfSites = siteRepository.findAll();
@@ -73,6 +90,7 @@ public class IndexingServiceImpl implements IndexingService {
             if (site.getStatus().equals(Status.INDEXING)) {
                 siteRepository.updateSiteStatusAndError(Status.FAILED, "Индексация остановлена пользователем", site.getId());
                 result.setResult(true);
+                pool.shutdown();
             }
         }
         if (result.getResult()) {
@@ -93,11 +111,10 @@ public class IndexingServiceImpl implements IndexingService {
                 URL siteUrl = new URL(url);
                 Site site = siteRepository.findByName(siteUrl.getHost());
                 if (site == null) {
-                    URL newSite = new URL(url);
-                    site = new Site(Status.INDEXED, LocalDateTime.now(), newSite.getProtocol() + "://" + newSite.getHost() + "/", newSite.getHost());
+                    site = new Site(Status.INDEXED, LocalDateTime.now(), siteUrl.getProtocol() + "://" + siteUrl.getHost() + "/", siteUrl.getHost());
                     siteRepository.save(site);
                 }
-                populatingTables(siteUrl,site,doc,response);
+                populatingTables(siteUrl, site, doc, response);
 
             } catch (IOException | ArrayIndexOutOfBoundsException e) {
                 System.out.println(e.getMessage());
@@ -110,16 +127,18 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private void indexing(Site site) {
-        List<Page> pagesList;
+        long start = System.currentTimeMillis();
         Page rootPage = new Page();
         rootPage.setPath(site.getUrl());
-        SiteMapGeneratorService siteMapGeneratorService = new SiteMapGeneratorService(rootPage, site, this);
-        ForkJoinPool pool = new ForkJoinPool();
-        pagesList = pool.invoke(siteMapGeneratorService);
-        pagesList.addAll(SiteMapGeneratorService.badResponseSites);
+        SiteMapGeneratorService siteMapGeneratorService = new SiteMapGeneratorService(rootPage, site, pageRepository, siteRepository, lemmaRepository, indexRepository);
+        pool = new ForkJoinPool();
+        pool.invoke(siteMapGeneratorService);
+        pool.shutdown();
         if (siteRepository.findById(site.getId()).get().getStatus().equals(Status.INDEXING)) {
             siteRepository.updateSiteStatusById(Status.INDEXED, site.getId());
         }
+        long endTime = System.currentTimeMillis();
+        System.out.println(endTime - start);
     }
 
     private Boolean urlChecking(String url) {
@@ -138,16 +157,16 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private void populatingTables(URL url, Site site, Document document, Connection.Response response) {
-        Page page = pageRepository.findByPath(url.getPath());
+        Page page = pageRepository.findFirstByPath(url.getPath());
         if(page != null){
             pageRepository.delete(page);
         }
         page = new Page(url.getPath(), response.statusCode(), document.html(), site);
         pageRepository.save(page);
         siteRepository.updateSiteSetTimeForId(LocalDateTime.now(), site.getId());
-        Map<String, Long> map = LemmaConverter.textToLemma(document.html());
+        Map<String, Long> map = lemmaConverter.textToLemma(document.html());
         for (Map.Entry<String, Long> lemmaMap : map.entrySet()) {
-            Lemma lemma = lemmaRepository.findByLemma(lemmaMap.getKey());
+            Lemma lemma = lemmaRepository.findFirstByLemmaAndSite(lemmaMap.getKey(),site);
             if (lemma == null) {
                 lemma = new Lemma();
                 lemma.setSite(site);
@@ -158,7 +177,7 @@ public class IndexingServiceImpl implements IndexingService {
                 lemma.setFrequency(lemma.getFrequency() + 1);
                 lemmaRepository.save(lemma);
             }
-            Index index = new Index(lemmaMap.getValue().intValue(), page, lemma);
+            Index index = new Index(lemma, page, lemmaMap.getValue().intValue());
             indexRepository.save(index);
         }
     }

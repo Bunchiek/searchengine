@@ -28,26 +28,16 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StatisticsServiceImpl implements StatisticsService {
 
-    private final Random random = new Random();
-    private final SitesList sites;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
-    private final IndexRepository  indexRepository;
 
     @Override
     public StatisticsResponse getStatistics() {
-        String[] statuses = { "INDEXED", "FAILED", "INDEXING" };
-        String[] errors = {
-                "Ошибка индексации: главная страница сайта не доступна",
-                "Ошибка индексации: сайт не доступен",
-                ""
-        };
         List<Site> siteList = siteRepository.findAll();
         TotalStatistics total = new TotalStatistics();
         total.setSites(siteList.size());
         total.setIndexing(siteList.stream().anyMatch(s->s.getStatus().equals(Status.INDEXING)));
-
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
 
         for(Site sites : siteList){

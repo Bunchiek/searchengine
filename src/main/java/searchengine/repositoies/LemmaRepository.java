@@ -13,12 +13,18 @@ import searchengine.services.Result;
 import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface LemmaRepository extends JpaRepository<Lemma, Integer> {
 
     Lemma findByLemma(String lemma);
+
+    Lemma findFirstByLemmaAndSite(String lemma, Site site);
     List<Lemma> findBySite(Site site);
+
+
+
     @Transactional
     @Modifying
     void deleteBySite(Site site);
@@ -27,4 +33,9 @@ public interface LemmaRepository extends JpaRepository<Lemma, Integer> {
     @Modifying
     @Query("delete from Lemma where site = :site")
     void deleteChistoEpta(@Param("site") Site site);
+
+    @Transactional
+    @Modifying
+    @Query("update Lemma set frequency = :frequency where id = :id")
+    void updateLemmaFrequency(@Param("frequency")Integer frequency, @Param("id") int id);
 }
