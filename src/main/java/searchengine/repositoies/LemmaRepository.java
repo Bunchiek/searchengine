@@ -18,7 +18,7 @@ import java.util.Optional;
 @Repository
 public interface LemmaRepository extends JpaRepository<Lemma, Integer> {
 
-    Lemma findByLemma(String lemma);
+    List<Lemma> findByLemma(String lemma);
 
     Lemma findFirstByLemmaAndSite(String lemma, Site site);
     List<Lemma> findBySite(Site site);

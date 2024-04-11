@@ -22,10 +22,15 @@ public class Main {
 
         LuceneMorphology luceneMorph = new RussianLuceneMorphology();
 
-        String test = "ыфвфывфыв";
+        String test = "корпоративы";
+        String test2 = luceneMorph.getNormalForms(test).get(0);
+        String test3 = luceneMorph.getNormalForms(test2).get(0);
 
-        System.out.println(luceneMorph.checkString(test));
-        System.out.println(luceneMorph.getMorphInfo(test));
+        System.out.println(test);
+
+        System.out.println(test2);
+
+        System.out.println(test3);
 //
 //
 //        String[] particlesNames = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
