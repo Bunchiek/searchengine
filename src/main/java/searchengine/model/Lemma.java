@@ -24,7 +24,7 @@ public class Lemma {
     @JoinColumn(name = "site_id", nullable = false)
     private Site site;
 
-    @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "lemma")
     Set<Index> indices;
 
 

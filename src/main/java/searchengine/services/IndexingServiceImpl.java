@@ -3,6 +3,8 @@ package searchengine.services;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.apache.lucene.morphology.LuceneMorphology;
+import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -166,14 +168,21 @@ public class IndexingServiceImpl implements IndexingService {
         siteRepository.updateSiteSetTimeForId(LocalDateTime.now(), site.getId());
         Map<String, Long> map = lemmaConverter.textToLemma(document.html());
         for (Map.Entry<String, Long> lemmaMap : map.entrySet()) {
-            Lemma lemma = lemmaRepository.findFirstByLemmaAndSite(lemmaMap.getKey(),site);
-            if (lemma == null) {
-                lemma = new Lemma();
+            List<Lemma> lemmaList = lemmaRepository.findByLemmaAndSite(lemmaMap.getKey(),site);
+            Lemma lemma = new Lemma();
+            if (lemmaList.isEmpty()) {
                 lemma.setSite(site);
                 lemma.setLemma(lemmaMap.getKey());
                 lemma.setFrequency(1);
                 lemmaRepository.save(lemma);
             } else {
+                lemmaList.stream()
+                                .forEach(s->{
+                                    lemmaRepository.deleteByLemma(s.getLemma());
+                                    lemma.setSite(s.getSite());
+                                    lemma.setLemma(s.getLemma());
+                                    lemma.setFrequency(lemma.getFrequency()+s.getFrequency());
+                                });
                 lemma.setFrequency(lemma.getFrequency() + 1);
                 lemmaRepository.save(lemma);
             }

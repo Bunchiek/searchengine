@@ -20,14 +20,15 @@ public interface LemmaRepository extends JpaRepository<Lemma, Integer> {
 
     List<Lemma> findByLemma(String lemma);
 
-    Lemma findFirstByLemmaAndSite(String lemma, Site site);
+    List<Lemma> findByLemmaAndSite(String lemma, Site site);
     List<Lemma> findBySite(Site site);
+
 
 
 
     @Transactional
     @Modifying
-    void deleteBySite(Site site);
+    void deleteByLemma(String lemma);
 
     @Transactional
     @Modifying

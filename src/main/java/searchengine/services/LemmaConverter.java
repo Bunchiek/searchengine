@@ -35,11 +35,11 @@ public class LemmaConverter {
                         }
                         return true;
                     })
-                    .map(s->luceneMorph.getNormalForms(s).get(0))
+                    .map(s->luceneMorph.getMorphInfo(s).get(0))
                     .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return  map;
+        return map;
     }
 }
