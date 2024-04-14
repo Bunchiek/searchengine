@@ -24,7 +24,7 @@ public class Page {
     @Column(columnDefinition = "MEDIUMTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",nullable = false)
     private String content;
 
-    @OneToMany(mappedBy = "page")
+    @OneToMany(mappedBy = "page", cascade = CascadeType.ALL)
     Set<Index> indices;
 
     @ManyToOne

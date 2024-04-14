@@ -1,7 +1,11 @@
 package searchengine.dto.searching;
 
-import lombok.Data;
+import lombok.*;
 
+
+@Setter
+@Getter
+@ToString
 @Data
 public class SearchResult {
     private String uri;

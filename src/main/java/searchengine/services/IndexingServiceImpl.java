@@ -92,7 +92,6 @@ public class IndexingServiceImpl implements IndexingService {
             if (site.getStatus().equals(Status.INDEXING)) {
                 siteRepository.updateSiteStatusAndError(Status.FAILED, "Индексация остановлена пользователем", site.getId());
                 result.setResult(true);
-                pool.shutdown();
             }
         }
         if (result.getResult()) {
@@ -133,6 +132,7 @@ public class IndexingServiceImpl implements IndexingService {
         Page rootPage = new Page();
         rootPage.setPath(site.getUrl());
         SiteMapGeneratorService siteMapGeneratorService = new SiteMapGeneratorService(rootPage, site, pageRepository, siteRepository, lemmaRepository, indexRepository);
+//        SiteMapGeneratorService siteMapGeneratorService = new SiteMapGeneratorService();
         pool = new ForkJoinPool();
         pool.invoke(siteMapGeneratorService);
         pool.shutdown();
@@ -167,27 +167,27 @@ public class IndexingServiceImpl implements IndexingService {
         pageRepository.save(page);
         siteRepository.updateSiteSetTimeForId(LocalDateTime.now(), site.getId());
         Map<String, Long> map = lemmaConverter.textToLemma(document.html());
-        for (Map.Entry<String, Long> lemmaMap : map.entrySet()) {
-            List<Lemma> lemmaList = lemmaRepository.findByLemmaAndSite(lemmaMap.getKey(),site);
-            Lemma lemma = new Lemma();
-            if (lemmaList.isEmpty()) {
-                lemma.setSite(site);
-                lemma.setLemma(lemmaMap.getKey());
-                lemma.setFrequency(1);
-                lemmaRepository.save(lemma);
-            } else {
-                lemmaList.stream()
-                                .forEach(s->{
-                                    lemmaRepository.deleteByLemma(s.getLemma());
-                                    lemma.setSite(s.getSite());
-                                    lemma.setLemma(s.getLemma());
-                                    lemma.setFrequency(lemma.getFrequency()+s.getFrequency());
-                                });
-                lemma.setFrequency(lemma.getFrequency() + 1);
-                lemmaRepository.save(lemma);
-            }
-            Index index = new Index(lemma, page, lemmaMap.getValue().intValue());
-            indexRepository.save(index);
-        }
+//        for (Map.Entry<String, Long> lemmaMap : map.entrySet()) {
+//            Lemma lemmaList = lemmaRepository.findByLemmaAndSite(lemmaMap.getKey(),site);
+//            Lemma lemma = new Lemma();
+//            if (lemmaList.isEmpty()) {
+//                lemma.setSite(site);
+//                lemma.setLemma(lemmaMap.getKey());
+//                lemma.setFrequency(1);
+//                lemmaRepository.save(lemma);
+//            } else {
+//                lemmaList.stream()
+//                                .forEach(s->{
+//                                    lemmaRepository.deleteByLemma(s.getLemma());
+//                                    lemma.setSite(s.getSite());
+//                                    lemma.setLemma(s.getLemma());
+//                                    lemma.setFrequency(lemma.getFrequency()+s.getFrequency());
+//                                });
+//                lemma.setFrequency(lemma.getFrequency() + 1);
+//                lemmaRepository.save(lemma);
+//            }
+//            Index index = new Index(lemma, page, lemmaMap.getValue().intValue());
+//            indexRepository.save(index);
+//        }
     }
 }

@@ -21,6 +21,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.RecursiveTask;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +33,7 @@ public class SiteMapGeneratorService extends RecursiveAction {
     private SiteRepository siteRepository;
     private LemmaRepository lemmaRepository;
     private IndexRepository indexRepository;
-    private final LemmaConverter lemmaConverter = new LemmaConverter();
+    static Lock lock = new ReentrantLock();
 
     public SiteMapGeneratorService(Page page, Site site, PageRepository pageRepository, SiteRepository siteRepository, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
         this.page = page;
@@ -41,9 +43,13 @@ public class SiteMapGeneratorService extends RecursiveAction {
         this.lemmaRepository = lemmaRepository;
         this.indexRepository = indexRepository;
     }
-
     @Override
     protected void compute() {
+        if(siteRepository.findAll()
+                .stream()
+                .anyMatch(s->s.getStatus().equals(Status.FAILED))){
+            Thread.currentThread().interrupt();
+        }
         List<Page> list = webTree(page);
         List<SiteMapGeneratorService> subTask = new LinkedList<>();
         for (Page page : list) {
@@ -56,8 +62,7 @@ public class SiteMapGeneratorService extends RecursiveAction {
             task.join();
         }
     }
-
-    private synchronized List<Page> webTree(Page page) {
+    private List<Page> webTree(Page page) {
         Document doc = null;
         List<Page> list = new ArrayList<>();
         String temp = "";
@@ -94,46 +99,34 @@ public class SiteMapGeneratorService extends RecursiveAction {
         return list;
     }
 
-    private synchronized void testSave(Page page) {
+    private void testSave(Page page) {
         if (pageRepository.findFirstByPath(page.getPath()) == null) {
             pageRepository.save(page);
             populatingTable(page);
         }
     }
-    private synchronized void populatingTable(Page page) {
-//        Map<String, Long> map = lemmaConverter.textToLemma(page.getContent());
-        Map<String, Integer> map1 = null;
+    private void populatingTable(Page page) {
+        Map<String, Integer> map;
         try {
-            map1 = LemmaFinder.getInstance().collectLemmas(page.getContent());
+            map = LemmaFinder.getInstance().collectLemmas(page.getContent());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        for (Map.Entry<String, Integer> lemmaMap : map1.entrySet()) {
-            Lemma lemma = new Lemma();
-            lemma.setSite(site);
-            lemma.setLemma(lemmaMap.getKey());
-            List<Lemma> lemmaList = lemmaRepository.findByLemmaAndSite(lemmaMap.getKey(),site);
-            if (lemmaList.isEmpty()) {
+        for (Map.Entry<String, Integer> lemmaMap : map.entrySet()) {
+            lock.lock();
+            Lemma lemma = lemmaRepository.findByLemmaAndSite(lemmaMap.getKey(), site);
+            if (lemma == null) {
+                lemma = new Lemma();
+                lemma.setSite(site);
+                lemma.setLemma(lemmaMap.getKey());
                 lemma.setFrequency(1);
                 lemmaRepository.save(lemma);
-                Index index = new Index(lemma, page, lemmaMap.getValue());
-                indexRepository.save(index);
+            } else {
+                lemmaRepository.updateLemmaFrequency(lemma.getFrequency() + 1, lemma.getId());
             }
-//            else if(lemmaList.size()>1) {
-//                lemmaList
-//                        .forEach(s->{
-//                            lemma.setSite(s.getSite());
-//                            lemma.setLemma(s.getLemma());
-//                            lemma.setFrequency(lemma.getFrequency()+s.getFrequency());
-//                            lemmaRepository.deleteByLemma(s.getLemma());
-//                        });
-//                lemma.setFrequency(lemma.getFrequency() + 1);
-//                lemmaRepository.save(lemma);
-//            }else {
-//                lemma.setFrequency(lemma.getFrequency() + 1);
-//                lemmaRepository.save(lemma);
-//            }
-
+            lock.unlock();
+            Index index = new Index(lemma, page, lemmaMap.getValue());
+            indexRepository.save(index);
         }
     }
 }
