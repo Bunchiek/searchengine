@@ -2,9 +2,13 @@ package searchengine.controllers;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import searchengine.dto.searching.SearchResult;
+import searchengine.dto.searching.SearchTest;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.model.Site;
 import searchengine.services.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -41,10 +45,21 @@ public class ApiController {
     }
 
     @GetMapping("/search")
-    public Result search(@RequestParam String query, @RequestParam String site,
-                         @RequestParam Integer offset, @RequestParam Integer limit){
-        searchService.search(query,site,offset,limit);
-        return null;
+    public SearchTest search(@RequestParam String query){
+        String site1 = "test";
+        Integer offset1 = 0;
+        Integer limit1 = 0;
+        List<SearchResult> searchResult = searchService.search(query,site1,offset1,limit1);
+        SearchTest searchTest = new SearchTest();
+        searchTest.setResult(true);
+        searchTest.setCount(searchResult.size());
+        searchTest.setData(searchResult);
+        System.out.println(query);
+        return searchTest;
+//        return searchService.search(query,site1,offset1,limit1);
     }
+
+//    , @RequestParam String site,
+//    @RequestParam Integer offset, @RequestParam Integer limit
 
 }

@@ -1,5 +1,9 @@
 package searchengine.services;
 
+import searchengine.dto.searching.SearchResult;
+
+import java.util.List;
+
 public interface SearchService {
-    Result search(String query, String site, Integer offset, Integer limit);
+    List<SearchResult> search(String query, String site, Integer offset, Integer limit);
 }

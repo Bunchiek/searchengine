@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Service;
 import searchengine.dto.searching.SearchResult;
 import searchengine.model.Index;
@@ -24,22 +25,20 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SearchServiceImpl implements SearchService{
 
-    private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
-    private final LemmaConverter lemmaConverter;
+
     @Override
-    public Result search(String query, String site, Integer offset, Integer limit) {
+    public List<SearchResult> search(String query, String site, Integer offset, Integer limit) {
+        List<SearchResult> result = new ArrayList<>();
         Map<String, Integer> map = null;
         try {
             map = LemmaFinder.getInstance().collectLemmas(query);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        System.out.println("Слова что ты ввел" + map);
-
-        List<Lemma> list = map.keySet().stream()
+        List<Lemma> lemmaList = map.keySet().stream()
                 .map(s->lemmaRepository.findByLemma(s).get(0))
                 .takeWhile(Objects::nonNull)
                 .filter(Objects::nonNull)
@@ -47,104 +46,91 @@ public class SearchServiceImpl implements SearchService{
                 .sorted(Comparator.comparing(Lemma::getFrequency))
                 .toList();
 
-
-        System.out.println("Леммы полученные из списка слов " + list);
-
-        if(list.isEmpty()){
-            System.out.println("ничего не найдено1");
-            return null;
+        if(lemmaList.isEmpty()){
+            return result;
         }
 
-        List<Page> result = list.get(0).getIndices()
+        List<Page> listOfAllPages = lemmaList.get(0).getIndices()
                 .stream()
                 .map(Index::getPage)
                 .toList();
 
-        System.out.println("список всех страниц где есть слово" + result);
+        List<Page> listSortedPages = new ArrayList<>(listOfAllPages);
 
-        List<Page> result2 = new ArrayList<>(result);
-
-        if(list.size()==1){
-            System.out.println("Единственное слово и его страницы " + result);
-
+        if(lemmaList.size()==1){
+            return fillingList(listOfAllPages,lemmaList,result, query);
         }else{
-            for(int i = 1; i < list.size(); i++){
-                for(Page page : result){
-                    Set<Index> set = list.get(i).getIndices();
+            for(int i = 1; i < lemmaList.size(); i++){
+                for(Page page : listOfAllPages){
+                    Set<Index> set = lemmaList.get(i).getIndices();
                     List<Page> pages = new ArrayList<>();
                     for(Index set1 : set){
                         pages.add(set1.getPage());
                     }
                     if(!pages.contains(page)){
-                        result2.remove(page);
+                        listSortedPages.remove(page);
                     }
-//                    if(!(list.get(i).getIndices().stream().map(Index::getPage).toList().contains(page)))
-//                        result2.clear();
-//                    return null;
                 }
-                if(result2.isEmpty()){
-                    return null;
+                if(listSortedPages.isEmpty()){
+                    return result;
                 }
             }
         }
+        return fillingList(listSortedPages,lemmaList, result, query);
+    }
 
-        System.out.println("найденные страницы" + result2);
+    private String getSnippet(String content, String query){
+        content = Jsoup.clean(content, Safelist.none());
+        String[] queryArray = query.split(" ");
+        int start = content.indexOf(queryArray[0]);
+        int finish = start;
+        if(start == -1){
+            return query;
+        }
+        while (content.charAt(start - 1) != '.') {
+            start--;
+        }
+        for(;;){
+            if(content.charAt(finish + 1) == '.'){
+                finish = finish + 2;
+                break;
+            }
+            finish ++;
+        }
+        content = content.substring(start, finish).replaceAll("[^А-Я а-я.,]", "");
 
-        Float maxAbsRel = result2.stream()
+        for(String word : queryArray){
+            if(word.length()>3){
+                content = content.replaceAll(word,"<b>"+word+"</b>");
+            }
+        }
+        return content.trim();
+    }
+
+    private List<SearchResult> fillingList(List<Page> pageList, List<Lemma> lemmaList, List<SearchResult> searchResults, String query){
+        float maxAbsRel = pageList.stream()
                 .map(s->{
                     float result3 = (float) 0;
-                    for(Lemma lemma : list){
+                    for(Lemma lemma : lemmaList){
                         result3 += indexRepository.findIndexByPageAndLemma(s,lemma).getRank();
                     }
                     return result3;
                 })
                 .max((Comparator.comparing(Float::valueOf))).orElseThrow();
-
-        System.out.println("макс значение абсолютной релевантности" + maxAbsRel);
-
-
-
-//        List<SearchResult> test = result2.stream()
-//                .sorted(Comparator.comparing(s->{
-//                    float resul = (float)0;
-//                    for(Lemma lemma : list){
-//                    resul += indexRepository.findIndexByPageAndLemma((Page) s,lemma).getRank();
-//                }
-//                    resul /= maxAbsRel;
-//                    searchResult.setRelevance(resul);
-//                    return resul;}).reversed())
-//                .map(s->{
-//                    searchResult.setUri(s.getPath());
-//                    Document document = Jsoup.parse(s.getContent());
-//                    searchResult.setTitle(document.title());
-//                    searchResult.setSnippet("DEVELOPING");
-//                    return searchResult;
-//                })
-//                .toList();
-
-
-        List<SearchResult> test2 = new ArrayList<>();
-
-        for(Page page : result2){
+        for(Page page : pageList){
             float reer = 0.0F;
             SearchResult searchResult = new SearchResult();
             searchResult.setUri(page.getPath());
             Document document = Jsoup.parse(page.getContent());
             searchResult.setTitle(document.title());
-            searchResult.setSnippet("Developing");
-            for(Lemma lemma : list){
+            searchResult.setSnippet(getSnippet(page.getContent(), query));
+            for(Lemma lemma : lemmaList){
                 reer += indexRepository.findIndexByPageAndLemma(page,lemma).getRank()/maxAbsRel;
             }
             searchResult.setRelevance(reer/maxAbsRel);
-            test2.add(searchResult);
+            searchResults.add(searchResult);
         }
-
-        test2.sort(Comparator.comparing(SearchResult::getRelevance).reversed());
-
-
-
-        System.out.println("Список страниц отсортированных по абсолютной релевантности" + test2);
-        return null;
+        searchResults.sort(Comparator.comparing(SearchResult::getRelevance).reversed());
+        return searchResults;
     }
-
 }
