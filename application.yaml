@@ -4,7 +4,7 @@ server:
 spring:
   datasource:
     username: root
-    password: 1337
+    password: Proba22
     url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
   jpa:
     properties:
@@ -18,7 +18,7 @@ spring:
 
 indexing-settings:
   siteInfos:
-        - url: https://nikoartgallery.com/
+        - url: https://nikoartgallery.com
           name: nikoartgallery.com
 #
 #        - url: https://ipfran.ru/

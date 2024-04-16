@@ -11,6 +11,7 @@ import searchengine.dto.searching.SearchResult;
 import searchengine.model.Index;
 import searchengine.model.Lemma;
 import searchengine.model.Page;
+import searchengine.model.Site;
 import searchengine.repositoies.IndexRepository;
 import searchengine.repositoies.LemmaRepository;
 import searchengine.repositoies.PageRepository;
@@ -39,7 +40,7 @@ public class SearchServiceImpl implements SearchService{
             throw new RuntimeException(e);
         }
         List<Lemma> lemmaList = map.keySet().stream()
-                .map(s->lemmaRepository.findByLemma(s).get(0))
+                .map(lemmaRepository::findByLemma)
                 .takeWhile(Objects::nonNull)
                 .filter(Objects::nonNull)
                 .filter(s-> s.getFrequency() < ((double)pageRepository.findAll().size() / 100) * 90)
@@ -127,6 +128,9 @@ public class SearchServiceImpl implements SearchService{
             for(Lemma lemma : lemmaList){
                 reer += indexRepository.findIndexByPageAndLemma(page,lemma).getRank()/maxAbsRel;
             }
+            Site site = page.getSite();
+            searchResult.setSite(site.getUrl());
+            searchResult.setSiteName(site.getName());
             searchResult.setRelevance(reer/maxAbsRel);
             searchResults.add(searchResult);
         }

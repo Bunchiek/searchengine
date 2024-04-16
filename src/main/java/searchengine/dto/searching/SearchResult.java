@@ -4,8 +4,8 @@ import lombok.*;
 
 @Data
 public class SearchResult {
-    private String site = "test";
-    private String siteName = "test";
+    private String site;
+    private String siteName;
     private String uri;
     private String title;
     private String snippet;
