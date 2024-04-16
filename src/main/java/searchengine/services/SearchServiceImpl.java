@@ -29,55 +29,21 @@ public class SearchServiceImpl implements SearchService{
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
+    private final SiteRepository siteRepository;
 
     @Override
-    public List<SearchResult> search(String query, String site, Integer offset, Integer limit) {
+    public List<SearchResult> search(String query, String site) {
         List<SearchResult> result = new ArrayList<>();
-        Map<String, Integer> map = null;
-        try {
-            map = LemmaFinder.getInstance().collectLemmas(query);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        List<Lemma> lemmaList = map.keySet().stream()
-                .map(lemmaRepository::findByLemma)
-                .takeWhile(Objects::nonNull)
-                .filter(Objects::nonNull)
-                .filter(s-> s.getFrequency() < ((double)pageRepository.findAll().size() / 100) * 90)
-                .sorted(Comparator.comparing(Lemma::getFrequency))
-                .toList();
-
-        if(lemmaList.isEmpty()){
-            return result;
-        }
-
-        List<Page> listOfAllPages = lemmaList.get(0).getIndices()
-                .stream()
-                .map(Index::getPage)
-                .toList();
-
-        List<Page> listSortedPages = new ArrayList<>(listOfAllPages);
-
-        if(lemmaList.size()==1){
-            return fillingList(listOfAllPages,lemmaList,result, query);
-        }else{
-            for(int i = 1; i < lemmaList.size(); i++){
-                for(Page page : listOfAllPages){
-                    Set<Index> set = lemmaList.get(i).getIndices();
-                    List<Page> pages = new ArrayList<>();
-                    for(Index set1 : set){
-                        pages.add(set1.getPage());
-                    }
-                    if(!pages.contains(page)){
-                        listSortedPages.remove(page);
-                    }
-                }
-                if(listSortedPages.isEmpty()){
-                    return result;
-                }
+        if(site.equals("list")){
+            for(Site sites : siteRepository.findAll()){
+                result.addAll(getPages(query,sites));
             }
+        }else {
+            result.addAll(getPages(query,siteRepository.findSiteByUrl(site)));
         }
-        return fillingList(listSortedPages,lemmaList, result, query);
+
+        return result;
+
     }
 
     private String getSnippet(String content, String query){
@@ -136,5 +102,54 @@ public class SearchServiceImpl implements SearchService{
         }
         searchResults.sort(Comparator.comparing(SearchResult::getRelevance).reversed());
         return searchResults;
+    }
+
+    private List<SearchResult> getPages(String query, Site site){
+        List<SearchResult> result = new ArrayList<>();
+        Map<String, Integer> map = null;
+        try {
+            map = LemmaFinder.getInstance().collectLemmas(query);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        List<Lemma> lemmaList = map.keySet().stream()
+                .map(s->lemmaRepository.findByLemmaAndSite(s,site))
+                .takeWhile(Objects::nonNull)
+                .filter(Objects::nonNull)
+                .filter(s-> s.getFrequency() < ((double)pageRepository.findAll().size() / 100) * 90)
+                .sorted(Comparator.comparing(Lemma::getFrequency))
+                .toList();
+
+        if(lemmaList.isEmpty()){
+            return result;
+        }
+
+        List<Page> listOfAllPages = lemmaList.get(0).getIndices()
+                .stream()
+                .map(Index::getPage)
+                .toList();
+
+        List<Page> listSortedPages = new ArrayList<>(listOfAllPages);
+
+        if(lemmaList.size()==1){
+            return fillingList(listOfAllPages,lemmaList,result, query);
+        }else{
+            for(int i = 1; i < lemmaList.size(); i++){
+                for(Page page : listOfAllPages){
+                    Set<Index> set = lemmaList.get(i).getIndices();
+                    List<Page> pages = new ArrayList<>();
+                    for(Index set1 : set){
+                        pages.add(set1.getPage());
+                    }
+                    if(!pages.contains(page)){
+                        listSortedPages.remove(page);
+                    }
+                }
+                if(listSortedPages.isEmpty()){
+                    return result;
+                }
+            }
+        }
+        return fillingList(listSortedPages,lemmaList, result, query);
     }
 }

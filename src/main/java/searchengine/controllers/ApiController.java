@@ -45,21 +45,13 @@ public class ApiController {
     }
 
     @GetMapping("/search")
-    public SearchTest search(@RequestParam String query){
-        String site1 = "test";
-        Integer offset1 = 0;
-        Integer limit1 = 0;
-        List<SearchResult> searchResult = searchService.search(query,site1,offset1,limit1);
+    public SearchTest search(@RequestParam String query, @RequestParam(defaultValue = "list") String site){
+        List<SearchResult> searchResult = searchService.search(query,site);
         SearchTest searchTest = new SearchTest();
         searchTest.setResult(true);
         searchTest.setCount(searchResult.size());
         searchTest.setData(searchResult);
-        System.out.println(query);
         return searchTest;
-//        return searchService.search(query,site1,offset1,limit1);
     }
-
-//    , @RequestParam String site,
-//    @RequestParam Integer offset, @RequestParam Integer limit
 
 }

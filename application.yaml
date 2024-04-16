@@ -11,7 +11,7 @@ spring:
       hibernate:
       dialect: org.hibernate.dialect.MySQL8Dialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: false
 
 # example values
@@ -21,8 +21,8 @@ indexing-settings:
         - url: https://nikoartgallery.com
           name: Галерея искусств Niko
 #
-#        - url: https://ipfran.ru/
-#          name: ipfran.ru
+        - url: https://ipfran.ru/
+          name: ИПФ РАН
 #
 #      #520 + a lot of errors
 #          #169

@@ -55,15 +55,15 @@ public class IndexingServiceImpl implements IndexingService {
                 }
             }
         }
-        for (Site siteInfo : sitesList.getSites()) {
-            searchengine.model.Site siteToDelete = siteRepository.findSiteByUrl(siteInfo.getUrl());
+        for (Site site : sitesList.getSites()) {
+            searchengine.model.Site siteToDelete = siteRepository.findSiteByUrl(site.getUrl());
             if (siteToDelete != null) {
-                siteRepository.deleteByUrl(siteInfo.getUrl());
+                siteRepository.deleteByUrl(site.getUrl());
             }
             searchengine.model.Site siteToIndex = new searchengine.model.Site();
             siteToIndex.setStatusTime(LocalDateTime.now());
-            siteToIndex.setUrl(siteInfo.getUrl());
-            siteToIndex.setName(siteInfo.getName());
+            siteToIndex.setUrl(site.getUrl());
+            siteToIndex.setName(site.getName());
             siteToIndex.setStatus(Status.INDEXING);
             siteRepository.save(siteToIndex);
 
