@@ -2,8 +2,6 @@ package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import searchengine.config.SiteInfo;
-import searchengine.config.SitesList;
 import searchengine.dto.statistics.DetailedStatisticsItem;
 import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
@@ -12,17 +10,13 @@ import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.model.Site;
 import searchengine.model.Status;
-import searchengine.repositoies.IndexRepository;
 import searchengine.repositoies.LemmaRepository;
 import searchengine.repositoies.PageRepository;
 import searchengine.repositoies.SiteRepository;
 
 import java.sql.Timestamp;
-import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +28,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse getStatistics() {
-        List<Site> siteList = siteRepository.findAll();
+        List<searchengine.model.Site> siteList = siteRepository.findAll();
         TotalStatistics total = new TotalStatistics();
         total.setSites(siteList.size());
         total.setIndexing(siteList.stream().anyMatch(s->s.getStatus().equals(Status.INDEXING)));

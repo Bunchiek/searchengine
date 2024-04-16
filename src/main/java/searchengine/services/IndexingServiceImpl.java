@@ -3,14 +3,11 @@ package searchengine.services;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.apache.lucene.morphology.LuceneMorphology;
-import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import searchengine.config.SiteInfo;
+import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.*;
 import searchengine.repositoies.IndexRepository;
@@ -25,7 +22,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
@@ -48,10 +44,10 @@ public class IndexingServiceImpl implements IndexingService {
     @Override
     public Result startIndexing() {
         Result result = new Result();
-        List<Site> listOfSites = siteRepository.findAll();
+        List<searchengine.model.Site> listOfSites = siteRepository.findAll();
         Page.urls.clear();
         if (!listOfSites.isEmpty()) {
-            for (Site site : listOfSites) {
+            for (searchengine.model.Site site : listOfSites) {
                 if (site.getStatus().equals(Status.INDEXING)) {
                     result.setResult(false);
                     result.setError("Индексация уже запущена");
@@ -59,12 +55,12 @@ public class IndexingServiceImpl implements IndexingService {
                 }
             }
         }
-        for (SiteInfo siteInfo : sitesList.getSiteInfos()) {
-            Site siteToDelete = siteRepository.findSiteByUrl(siteInfo.getUrl());
+        for (Site siteInfo : sitesList.getSites()) {
+            searchengine.model.Site siteToDelete = siteRepository.findSiteByUrl(siteInfo.getUrl());
             if (siteToDelete != null) {
                 siteRepository.deleteByUrl(siteInfo.getUrl());
             }
-            Site siteToIndex = new Site();
+            searchengine.model.Site siteToIndex = new searchengine.model.Site();
             siteToIndex.setStatusTime(LocalDateTime.now());
             siteToIndex.setUrl(siteInfo.getUrl());
             siteToIndex.setName(siteInfo.getName());
@@ -87,8 +83,8 @@ public class IndexingServiceImpl implements IndexingService {
         executor.shutdown();
         Result result = new Result();
         result.setResult(false);
-        List<Site> listOfSites = siteRepository.findAll();
-        for (Site site : listOfSites) {
+        List<searchengine.model.Site> listOfSites = siteRepository.findAll();
+        for (searchengine.model.Site site : listOfSites) {
             if (site.getStatus().equals(Status.INDEXING)) {
                 siteRepository.updateSiteStatusAndError(Status.FAILED, "Индексация остановлена пользователем", site.getId());
                 result.setResult(true);
@@ -110,9 +106,9 @@ public class IndexingServiceImpl implements IndexingService {
                 Connection.Response response = Jsoup.connect(url).execute();
                 Document doc = response.parse();
                 URL siteUrl = new URL(url);
-                Site site = siteRepository.findByName(siteUrl.getHost());
+                searchengine.model.Site site = siteRepository.findByName(siteUrl.getHost());
                 if (site == null) {
-                    site = new Site(Status.INDEXED, LocalDateTime.now(), siteUrl.getProtocol() + "://" + siteUrl.getHost() + "/", siteUrl.getHost());
+                    site = new searchengine.model.Site(Status.INDEXED, LocalDateTime.now(), siteUrl.getProtocol() + "://" + siteUrl.getHost() + "/", siteUrl.getHost());
                     siteRepository.save(site);
                 }
                 populatingTables(siteUrl, site, doc, response);
@@ -127,7 +123,7 @@ public class IndexingServiceImpl implements IndexingService {
         return result;
     }
 
-    private void indexing(Site site) {
+    private void indexing(searchengine.model.Site site) {
         long start = System.currentTimeMillis();
         Page rootPage = new Page();
         rootPage.setPath(site.getUrl());
@@ -150,7 +146,7 @@ public class IndexingServiceImpl implements IndexingService {
         } catch (MalformedURLException e) {
             System.out.println(e.getMessage());
         }
-        for (SiteInfo sites : sitesList.getSiteInfos()) {
+        for (Site sites : sitesList.getSites()) {
             if (sites.getUrl().contains(siteURL.getHost())) {
                 return true;
             }
@@ -158,7 +154,7 @@ public class IndexingServiceImpl implements IndexingService {
         return false;
     }
 
-    private void populatingTables(URL url, Site site, Document document, Connection.Response response) {
+    private void populatingTables(URL url, searchengine.model.Site site, Document document, Connection.Response response) {
         Page page = pageRepository.findFirstByPath(url.getPath());
         if(page != null){
             pageRepository.delete(page);
