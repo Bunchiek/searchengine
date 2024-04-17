@@ -9,6 +9,7 @@ import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
+import searchengine.dto.indexing.IndexingStatus;
 import searchengine.model.*;
 import searchengine.repositoies.IndexRepository;
 import searchengine.repositoies.LemmaRepository;
@@ -42,8 +43,8 @@ public class IndexingServiceImpl implements IndexingService {
     private List<Thread> threads = new ArrayList<>();
 
     @Override
-    public Result startIndexing() {
-        Result result = new Result();
+    public IndexingStatus startIndexing() {
+        IndexingStatus result = new IndexingStatus();
         List<searchengine.model.Site> listOfSites = siteRepository.findAll();
         Page.urls.clear();
         if (!listOfSites.isEmpty()) {
@@ -79,9 +80,9 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     @Override
-    public Result stopIndexing() {
+    public IndexingStatus stopIndexing() {
         executor.shutdown();
-        Result result = new Result();
+        IndexingStatus result = new IndexingStatus();
         result.setResult(false);
         List<searchengine.model.Site> listOfSites = siteRepository.findAll();
         for (searchengine.model.Site site : listOfSites) {
@@ -98,8 +99,8 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     @Override
-    public Result indexPage(String url) {
-        Result result = new Result();
+    public IndexingStatus indexPage(String url) {
+        IndexingStatus result = new IndexingStatus();
         if (urlChecking(url)) {
             result.setResult(true);
             try {

@@ -2,10 +2,10 @@ package searchengine.controllers;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import searchengine.dto.indexing.IndexingStatus;
 import searchengine.dto.searching.SearchResult;
-import searchengine.dto.searching.SearchTest;
+import searchengine.dto.searching.SearchResponse;
 import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.model.Site;
 import searchengine.services.*;
 
 import java.util.List;
@@ -30,24 +30,24 @@ public class ApiController {
     }
 
     @GetMapping("/startIndexing")
-    public Result startIndexing(){
-        return indexingService.startIndexing();
+    public ResponseEntity<IndexingStatus> startIndexing(){
+        return ResponseEntity.ok(indexingService.startIndexing());
     }
     @GetMapping("/stopIndexing")
-    public Result stopIndexing(){
-        return indexingService.stopIndexing();
+    public ResponseEntity<IndexingStatus> stopIndexing(){
+        return ResponseEntity.ok(indexingService.stopIndexing());
     }
 
 
     @PostMapping("/indexPage")
-    public Result indexPage(@RequestParam String url){
-        return indexingService.indexPage(url);
+    public ResponseEntity<IndexingStatus> indexPage(@RequestParam String url){
+        return ResponseEntity.ok(indexingService.indexPage(url));
     }
 
     @GetMapping("/search")
-    public SearchTest search(@RequestParam String query, @RequestParam(defaultValue = "list") String site){
+    public SearchResponse search(@RequestParam String query, @RequestParam(defaultValue = "list") String site){
         List<SearchResult> searchResult = searchService.search(query,site);
-        SearchTest searchTest = new SearchTest();
+        SearchResponse searchTest = new SearchResponse();
         searchTest.setResult(true);
         searchTest.setCount(searchResult.size());
         searchTest.setData(searchResult);

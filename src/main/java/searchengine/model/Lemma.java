@@ -19,18 +19,10 @@ public class Lemma {
     private String lemma;
     @Column(nullable = false)
     private int frequency;
-
     @ManyToOne
     @JoinColumn(name = "site_id", nullable = false)
     private Site site;
-
     @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
     Set<Index> indices;
 
-
-    @Override
-    public String toString() {
-        return "Lemma{" +
-                ", lemma='" + lemma + '\'';
-    }
 }

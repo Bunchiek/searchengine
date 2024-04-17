@@ -23,23 +23,17 @@ public class Page {
     private int code;
     @Column(columnDefinition = "MEDIUMTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",nullable = false)
     private String content;
-
     @OneToMany(mappedBy = "page", cascade = CascadeType.ALL)
     Set<Index> indices;
-
     @ManyToOne
     @JoinColumn(name = "site_id", nullable = false)
     private Site site;
-
     @Transient
     private List<Page> children = new ArrayList<>();
-
     @Transient
     public static Set<String> urls = new HashSet<>();
 
-
     public Page() {
-
     }
 
     public Page(String path) {
@@ -57,13 +51,6 @@ public class Page {
         children.add(page);
     }
 
-
-    @Override
-    public String toString() {
-        return "Page{" +
-                "path='" + path + '\'' +
-                '}';
-    }
 }
 
 
