@@ -67,14 +67,8 @@ public class IndexingServiceImpl implements IndexingService {
             siteToIndex.setName(site.getName());
             siteToIndex.setStatus(Status.INDEXING);
             siteRepository.save(siteToIndex);
-
-//            executor.submit(()->indexing(siteToIndex));
-//            executor.shutdown();
-
             new Thread(() -> indexing(siteToIndex)).start();
         }
-
-
         result.setResult(true);
         return result;
     }
@@ -129,7 +123,6 @@ public class IndexingServiceImpl implements IndexingService {
         Page rootPage = new Page();
         rootPage.setPath(site.getUrl());
         SiteMapGeneratorService siteMapGeneratorService = new SiteMapGeneratorService(rootPage, site, pageRepository, siteRepository, lemmaRepository, indexRepository);
-//        SiteMapGeneratorService siteMapGeneratorService = new SiteMapGeneratorService();
         pool = new ForkJoinPool();
         pool.invoke(siteMapGeneratorService);
         pool.shutdown();

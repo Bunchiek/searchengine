@@ -17,9 +17,5 @@ import java.util.List;
 public interface PageRepository extends JpaRepository<Page,Integer> {
 
     List<Page> findBySite(Site site);
-
     Page findFirstByPath(@Param("path") String path);
-    @Transactional
-    @Modifying
-    void deleteBySite(Site site);
 }

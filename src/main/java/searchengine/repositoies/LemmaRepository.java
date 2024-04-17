@@ -16,7 +16,6 @@ public interface LemmaRepository extends JpaRepository<Lemma, Integer> {
 
     Lemma findByLemmaAndSite(String lemma, Site site);
     List<Lemma> findBySite(Site site);
-
     @Transactional
     @Modifying
     @Query("update Lemma set frequency = :frequency where id = :id")

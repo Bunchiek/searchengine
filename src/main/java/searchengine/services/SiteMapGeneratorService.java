@@ -15,12 +15,10 @@ import searchengine.repositoies.PageRepository;
 import searchengine.repositoies.SiteRepository;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -76,7 +74,7 @@ public class SiteMapGeneratorService extends RecursiveAction {
                 page.setSite(site);
                 page.setCode(response.statusCode());
                 page.setContent(doc.html());
-                testSave(page);
+                savingPage(page);
                 siteRepository.updateSiteSetTimeForId(LocalDateTime.now(), site.getId());
                 Elements elements = doc.select("a");
                 for (Element element : elements) {
@@ -99,7 +97,7 @@ public class SiteMapGeneratorService extends RecursiveAction {
         return list;
     }
 
-    private void testSave(Page page) {
+    private void savingPage(Page page) {
         if (pageRepository.findFirstByPath(page.getPath()) == null) {
             pageRepository.save(page);
             populatingTable(page);
