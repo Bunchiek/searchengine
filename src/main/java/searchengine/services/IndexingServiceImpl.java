@@ -3,9 +3,12 @@ package searchengine.services;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.apache.commons.validator.routines.UrlValidator;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -20,12 +23,11 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @Getter
@@ -36,23 +38,21 @@ public class IndexingServiceImpl implements IndexingService {
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
-    ExecutorService executor = Executors.newSingleThreadExecutor();
     private ForkJoinPool pool = new ForkJoinPool();
-    private LemmaConverter lemmaConverter = new LemmaConverter();
     private final SitesList sitesList;
-    private List<Thread> threads = new ArrayList<>();
+    static Lock lock = new ReentrantLock();
 
     @Override
-    public IndexingStatus startIndexing() {
-        IndexingStatus result = new IndexingStatus();
+    public ResponseEntity<IndexingStatus> startIndexing() {
+        IndexingStatus indexingStatus = new IndexingStatus();
         List<searchengine.model.Site> listOfSites = siteRepository.findAll();
         Page.urls.clear();
         if (!listOfSites.isEmpty()) {
             for (searchengine.model.Site site : listOfSites) {
                 if (site.getStatus().equals(Status.INDEXING)) {
-                    result.setResult(false);
-                    result.setError("Индексация уже запущена");
-                    return result;
+                    indexingStatus.setResult(false);
+                    indexingStatus.setError("Индексация уже запущена");
+                    return new ResponseEntity<>(indexingStatus, HttpStatus.BAD_REQUEST);
                 }
             }
         }
@@ -69,34 +69,39 @@ public class IndexingServiceImpl implements IndexingService {
             siteRepository.save(siteToIndex);
             new Thread(() -> indexing(siteToIndex)).start();
         }
-        result.setResult(true);
-        return result;
+        indexingStatus.setResult(true);
+        return new ResponseEntity<>(indexingStatus, HttpStatus.OK);
     }
 
     @Override
-    public IndexingStatus stopIndexing() {
-        executor.shutdown();
-        IndexingStatus result = new IndexingStatus();
-        result.setResult(false);
+    public ResponseEntity<IndexingStatus> stopIndexing() {
+        IndexingStatus indexingStatus = new IndexingStatus();
+        indexingStatus.setResult(false);
         List<searchengine.model.Site> listOfSites = siteRepository.findAll();
         for (searchengine.model.Site site : listOfSites) {
             if (site.getStatus().equals(Status.INDEXING)) {
                 siteRepository.updateSiteStatusAndError(Status.FAILED, "Индексация остановлена пользователем", site.getId());
-                result.setResult(true);
+                indexingStatus.setResult(true);
             }
         }
-        if (result.getResult()) {
-            return result;
+        if (indexingStatus.getResult()) {
+            return new ResponseEntity<>(indexingStatus, HttpStatus.OK);
         }
-        result.setError("Индексация не запущена");
-        return result;
+        indexingStatus.setError("Индексация не запущена");
+        return new ResponseEntity<>(indexingStatus, HttpStatus.BAD_REQUEST);
     }
 
     @Override
-    public IndexingStatus indexPage(String url) {
-        IndexingStatus result = new IndexingStatus();
+    public ResponseEntity<IndexingStatus> indexPage(String url) {
+        IndexingStatus indexingStatus = new IndexingStatus();
+        UrlValidator validator = new UrlValidator();
+        if(!validator.isValid(url)){
+            indexingStatus.setResult(false);
+            indexingStatus.setError("Неверный ввод страницы");
+            return new ResponseEntity<>(indexingStatus, HttpStatus.BAD_REQUEST);
+        }
         if (urlChecking(url)) {
-            result.setResult(true);
+            indexingStatus.setResult(true);
             try {
                 Connection.Response response = Jsoup.connect(url).execute();
                 Document doc = response.parse();
@@ -112,10 +117,11 @@ public class IndexingServiceImpl implements IndexingService {
                 System.out.println(e.getMessage());
             }
         } else {
-            result.setResult(false);
-            result.setError("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
+            indexingStatus.setResult(false);
+            indexingStatus.setError("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
+            return new ResponseEntity<>(indexingStatus, HttpStatus.BAD_REQUEST);
         }
-        return result;
+        return new ResponseEntity<>(indexingStatus, HttpStatus.OK);
     }
 
     private void indexing(searchengine.model.Site site) {
@@ -150,34 +156,33 @@ public class IndexingServiceImpl implements IndexingService {
 
     private void populatingTables(URL url, searchengine.model.Site site, Document document, Connection.Response response) {
         Page page = pageRepository.findFirstByPath(url.getPath());
-        if(page != null){
+        if (page != null) {
             pageRepository.delete(page);
         }
         page = new Page(url.getPath(), response.statusCode(), document.html(), site);
         pageRepository.save(page);
         siteRepository.updateSiteSetTimeForId(LocalDateTime.now(), site.getId());
-        Map<String, Long> map = lemmaConverter.textToLemma(document.html());
-//        for (Map.Entry<String, Long> lemmaMap : map.entrySet()) {
-//            Lemma lemmaList = lemmaRepository.findByLemmaAndSite(lemmaMap.getKey(),site);
-//            Lemma lemma = new Lemma();
-//            if (lemmaList.isEmpty()) {
-//                lemma.setSite(site);
-//                lemma.setLemma(lemmaMap.getKey());
-//                lemma.setFrequency(1);
-//                lemmaRepository.save(lemma);
-//            } else {
-//                lemmaList.stream()
-//                                .forEach(s->{
-//                                    lemmaRepository.deleteByLemma(s.getLemma());
-//                                    lemma.setSite(s.getSite());
-//                                    lemma.setLemma(s.getLemma());
-//                                    lemma.setFrequency(lemma.getFrequency()+s.getFrequency());
-//                                });
-//                lemma.setFrequency(lemma.getFrequency() + 1);
-//                lemmaRepository.save(lemma);
-//            }
-//            Index index = new Index(lemma, page, lemmaMap.getValue().intValue());
-//            indexRepository.save(index);
-//        }
+        Map<String, Integer> map;
+        try {
+            map = LemmaFinder.getInstance().collectLemmas(page.getContent());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        for (Map.Entry<String, Integer> lemmaMap : map.entrySet()) {
+            lock.lock();
+            Lemma lemma = lemmaRepository.findByLemmaAndSite(lemmaMap.getKey(), site);
+            if (lemma == null) {
+                lemma = new Lemma();
+                lemma.setSite(site);
+                lemma.setLemma(lemmaMap.getKey());
+                lemma.setFrequency(1);
+                lemmaRepository.save(lemma);
+            } else {
+                lemmaRepository.updateLemmaFrequency(lemma.getFrequency() + 1, lemma.getId());
+            }
+            lock.unlock();
+            Index index = new Index(lemma, page, lemmaMap.getValue());
+            indexRepository.save(index);
+        }
     }
 }

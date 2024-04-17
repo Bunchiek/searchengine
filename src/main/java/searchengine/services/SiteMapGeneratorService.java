@@ -33,7 +33,8 @@ public class SiteMapGeneratorService extends RecursiveAction {
     private IndexRepository indexRepository;
     static Lock lock = new ReentrantLock();
 
-    public SiteMapGeneratorService(Page page, Site site, PageRepository pageRepository, SiteRepository siteRepository, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
+    public SiteMapGeneratorService(Page page, Site site, PageRepository pageRepository, SiteRepository siteRepository,
+                                   LemmaRepository lemmaRepository, IndexRepository indexRepository) {
         this.page = page;
         this.site = site;
         this.pageRepository = pageRepository;
@@ -103,6 +104,7 @@ public class SiteMapGeneratorService extends RecursiveAction {
             populatingTable(page);
         }
     }
+
     private void populatingTable(Page page) {
         Map<String, Integer> map;
         try {

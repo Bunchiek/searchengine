@@ -3,12 +3,9 @@ package searchengine.controllers;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import searchengine.dto.indexing.IndexingStatus;
-import searchengine.dto.searching.SearchResult;
 import searchengine.dto.searching.SearchResponse;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -31,27 +28,22 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<IndexingStatus> startIndexing(){
-        return ResponseEntity.ok(indexingService.startIndexing());
+        return indexingService.startIndexing();
     }
     @GetMapping("/stopIndexing")
     public ResponseEntity<IndexingStatus> stopIndexing(){
-        return ResponseEntity.ok(indexingService.stopIndexing());
+        return indexingService.stopIndexing();
     }
-
 
     @PostMapping("/indexPage")
     public ResponseEntity<IndexingStatus> indexPage(@RequestParam String url){
-        return ResponseEntity.ok(indexingService.indexPage(url));
+        return indexingService.indexPage(url);
     }
 
     @GetMapping("/search")
-    public SearchResponse search(@RequestParam String query, @RequestParam(defaultValue = "list") String site){
-        List<SearchResult> searchResult = searchService.search(query,site);
-        SearchResponse searchTest = new SearchResponse();
-        searchTest.setResult(true);
-        searchTest.setCount(searchResult.size());
-        searchTest.setData(searchResult);
-        return searchTest;
+    public ResponseEntity<SearchResponse> search(@RequestParam String query, @RequestParam(defaultValue = "list") String site){
+        return searchService.search(query,site);
+
     }
 
 }

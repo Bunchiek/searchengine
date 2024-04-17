@@ -12,6 +12,6 @@ import javax.transaction.Transactional;
 @Repository
 public interface IndexRepository extends JpaRepository<Index, Integer> {
 
-    public Index findIndexByPageAndLemma (Page page, Lemma lemma);
+    Index findIndexByPageAndLemma (Page page, Lemma lemma);
 
 }

@@ -9,7 +9,3 @@ public class Application {
         SpringApplication.run(Application.class, args);
     }
 }
-
-
-//coordinators@skillbox.ru
-

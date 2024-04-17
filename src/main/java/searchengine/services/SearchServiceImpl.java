@@ -1,12 +1,13 @@
 package searchengine.services;
 
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.safety.Safelist;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import searchengine.dto.searching.SearchResponse;
 import searchengine.dto.searching.SearchResult;
 import searchengine.model.Index;
 import searchengine.model.Lemma;
@@ -16,11 +17,8 @@ import searchengine.repositoies.IndexRepository;
 import searchengine.repositoies.LemmaRepository;
 import searchengine.repositoies.PageRepository;
 import searchengine.repositoies.SiteRepository;
-
 import java.io.IOException;
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,18 +30,32 @@ public class SearchServiceImpl implements SearchService{
     private final SiteRepository siteRepository;
 
     @Override
-    public List<SearchResult> search(String query, String site) {
-        List<SearchResult> result = new ArrayList<>();
-        if(site.equals("list")){
-            for(Site sites : siteRepository.findAll()){
-                result.addAll(getPages(query,sites));
-            }
+    public ResponseEntity<SearchResponse> search(String query, String site) {
+        SearchResponse searchResponse = new SearchResponse();
+
+        if(query.isEmpty()){
+            searchResponse.setResult(false);
+            searchResponse.setError("Задан пустой поисковый запрос");
+            return new ResponseEntity<>(searchResponse, HttpStatus.BAD_REQUEST);
         }else {
-            result.addAll(getPages(query,siteRepository.findSiteByUrl(site)));
+            List<SearchResult> searchResultList = new ArrayList<>();
+            if(site.equals("list")){
+                for(Site sites : siteRepository.findAll()){
+                    searchResultList.addAll(getPages(query,sites));
+                }
+            }else {
+                searchResultList.addAll(getPages(query,siteRepository.findSiteByUrl(site)));
+            }
+            if(searchResultList.isEmpty()){
+                searchResponse.setResult(false);
+                searchResponse.setError("Ничего не найдено");
+                return new ResponseEntity<>(searchResponse,HttpStatus.NOT_FOUND);
+            }
+            searchResponse.setResult(true);
+            searchResponse.setCount(searchResultList.size());
+            searchResponse.setData(searchResultList);
         }
-
-        return result;
-
+        return ResponseEntity.ok(searchResponse);
     }
 
     private String getSnippet(String content, String query){
@@ -130,7 +142,6 @@ public class SearchServiceImpl implements SearchService{
                 .toList();
 
         List<Page> listSortedPages = new ArrayList<>(listOfAllPages);
-
         if(lemmaList.size()==1){
             return fillingList(listOfAllPages,lemmaList,result, query);
         }else{
