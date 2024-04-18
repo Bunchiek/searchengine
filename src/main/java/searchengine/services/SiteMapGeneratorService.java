@@ -101,11 +101,11 @@ public class SiteMapGeneratorService extends RecursiveAction {
     private void savingPage(Page page) {
         if (pageRepository.findFirstByPath(page.getPath()) == null) {
             pageRepository.save(page);
-            populatingTable(page);
+            populatingTable(page,site,lemmaRepository,indexRepository);
         }
     }
 
-    private void populatingTable(Page page) {
+    private static void populatingTable(Page page, Site site, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
         Map<String, Integer> map;
         try {
             map = LemmaFinder.getInstance().collectLemmas(page.getContent());

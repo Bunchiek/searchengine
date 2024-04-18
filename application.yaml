@@ -4,14 +4,14 @@ server:
 spring:
   datasource:
     username: root
-    password: 1337
+    password: Proba22
     url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
   jpa:
     properties:
       hibernate:
       dialect: org.hibernate.dialect.MySQL8Dialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: false
 
 # example values

@@ -93,6 +93,7 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public ResponseEntity<IndexingStatus> indexPage(String url) {
+        Page.urls.clear();
         IndexingStatus indexingStatus = new IndexingStatus();
         UrlValidator validator = new UrlValidator();
         if(!validator.isValid(url)){
