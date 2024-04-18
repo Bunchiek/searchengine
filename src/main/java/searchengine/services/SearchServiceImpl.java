@@ -9,10 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import searchengine.dto.searching.SearchResponse;
 import searchengine.dto.searching.SearchResult;
-import searchengine.model.Index;
-import searchengine.model.Lemma;
-import searchengine.model.Page;
-import searchengine.model.Site;
+import searchengine.model.*;
 import searchengine.repositoies.IndexRepository;
 import searchengine.repositoies.LemmaRepository;
 import searchengine.repositoies.PageRepository;
@@ -41,10 +38,19 @@ public class SearchServiceImpl implements SearchService{
             List<SearchResult> searchResultList = new ArrayList<>();
             if(site.equals("list")){
                 for(Site sites : siteRepository.findAll()){
-                    searchResultList.addAll(getPages(query,sites));
+                    if(sites.getStatus().equals(Status.INDEXED)){
+                        searchResultList.addAll(getPages(query,sites));
+                    }
                 }
             }else {
-                searchResultList.addAll(getPages(query,siteRepository.findSiteByUrl(site)));
+                if(siteRepository.findSiteByUrl(site).getStatus().equals(Status.INDEXED)){
+                    searchResultList.addAll(getPages(query,siteRepository.findSiteByUrl(site)));
+                }else {
+                    searchResponse.setResult(false);
+                    searchResponse.setError("Сайт не проиндексирован");
+                    return new ResponseEntity<>(searchResponse, HttpStatus.BAD_REQUEST);
+                }
+
             }
             if(searchResultList.isEmpty()){
                 searchResponse.setResult(false);

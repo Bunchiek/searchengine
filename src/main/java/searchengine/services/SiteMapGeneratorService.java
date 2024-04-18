@@ -105,7 +105,7 @@ public class SiteMapGeneratorService extends RecursiveAction {
         }
     }
 
-    private static void populatingTable(Page page, Site site, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
+    public static void populatingTable(Page page, Site site, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
         Map<String, Integer> map;
         try {
             map = LemmaFinder.getInstance().collectLemmas(page.getContent());

@@ -35,6 +35,7 @@ public interface SiteRepository extends JpaRepository<Site, Integer> {
     @Modifying
     @Query("update Site set status = :state, lastError = :error  where id =:id")
     void updateSiteStatusAndError(@Param("state")Status status, @Param("error") String error, @Param("id") int id);
+
 }
 
 

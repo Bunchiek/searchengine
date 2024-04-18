@@ -107,9 +107,10 @@ public class IndexingServiceImpl implements IndexingService {
                 Connection.Response response = Jsoup.connect(url).execute();
                 Document doc = response.parse();
                 URL siteUrl = new URL(url);
-                searchengine.model.Site site = siteRepository.findByName(siteUrl.getHost());
+                String protocolHost = siteUrl.getProtocol() + "://" + siteUrl.getHost();
+                searchengine.model.Site site = siteRepository.findSiteByUrl(protocolHost);
                 if (site == null) {
-                    site = new searchengine.model.Site(Status.INDEXED, LocalDateTime.now(), siteUrl.getProtocol() + "://" + siteUrl.getHost() + "/", siteUrl.getHost());
+                    site = new searchengine.model.Site(Status.INDEXED, LocalDateTime.now(), protocolHost, siteUrl.getHost());
                     siteRepository.save(site);
                 }
                 populatingTables(siteUrl, site, doc, response);
@@ -163,27 +164,6 @@ public class IndexingServiceImpl implements IndexingService {
         page = new Page(url.getPath(), response.statusCode(), document.html(), site);
         pageRepository.save(page);
         siteRepository.updateSiteSetTimeForId(LocalDateTime.now(), site.getId());
-        Map<String, Integer> map;
-        try {
-            map = LemmaFinder.getInstance().collectLemmas(page.getContent());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        for (Map.Entry<String, Integer> lemmaMap : map.entrySet()) {
-            lock.lock();
-            Lemma lemma = lemmaRepository.findByLemmaAndSite(lemmaMap.getKey(), site);
-            if (lemma == null) {
-                lemma = new Lemma();
-                lemma.setSite(site);
-                lemma.setLemma(lemmaMap.getKey());
-                lemma.setFrequency(1);
-                lemmaRepository.save(lemma);
-            } else {
-                lemmaRepository.updateLemmaFrequency(lemma.getFrequency() + 1, lemma.getId());
-            }
-            lock.unlock();
-            Index index = new Index(lemma, page, lemmaMap.getValue());
-            indexRepository.save(index);
-        }
+        SiteMapGeneratorService.populatingTable(page,site,lemmaRepository,indexRepository);
     }
 }
