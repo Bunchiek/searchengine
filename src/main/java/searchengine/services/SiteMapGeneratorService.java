@@ -67,7 +67,7 @@ public class SiteMapGeneratorService extends RecursiveAction {
         String temp = "";
         try {
             URL path = new URL(page.getPath());
-            Thread.sleep(2000);
+            Thread.sleep(5000);
             Connection.Response response = Jsoup.connect(page.getPath()).execute();
             if (200 == response.statusCode()) {
                 doc = response.parse();
