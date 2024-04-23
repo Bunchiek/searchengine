@@ -15,10 +15,9 @@ import java.util.stream.Stream;
 @Service
 
 public class LemmaConverter {
-    public Map<String, Long> textToLemma(String html) {
+    public static Map<String, Long> textToLemma(String html) {
         Map<String, Long> map;
         List<String> list = List.of("МЕЖД", "ПРЕДЛ", "СОЮЗ");
-
         try {
             LuceneMorphology luceneMorph = new RussianLuceneMorphology();
             String result = Jsoup.clean(html, Safelist.none());
@@ -35,11 +34,11 @@ public class LemmaConverter {
                         }
                         return true;
                     })
-                    .map(s->luceneMorph.getMorphInfo(s).get(0))
+                    .map(s->luceneMorph.getNormalForms(s).get(0))
                     .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return map;
+        return  map;
     }
 }

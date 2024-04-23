@@ -67,7 +67,7 @@ public class SiteMapGeneratorService extends RecursiveAction {
         String temp = "";
         try {
             URL path = new URL(page.getPath());
-            Thread.sleep(5000);
+            Thread.sleep(2000);
             Connection.Response response = Jsoup.connect(page.getPath()).execute();
             if (200 == response.statusCode()) {
                 doc = response.parse();
@@ -106,13 +106,14 @@ public class SiteMapGeneratorService extends RecursiveAction {
     }
 
     public static void populatingTable(Page page, Site site, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
-        Map<String, Integer> map;
-        try {
-            map = LemmaFinder.getInstance().collectLemmas(page.getContent());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        for (Map.Entry<String, Integer> lemmaMap : map.entrySet()) {
+        Map<String, Long> map;
+        map = LemmaConverter.textToLemma(page.getContent());
+//        try {
+//            map = LemmaFinder.getInstance().collectLemmas(page.getContent());
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+        for (Map.Entry<String, Long> lemmaMap : map.entrySet()) {
             lock.lock();
             Lemma lemma = lemmaRepository.findByLemmaAndSite(lemmaMap.getKey(), site);
             if (lemma == null) {

@@ -4,7 +4,7 @@ server:
 spring:
   datasource:
     username: root
-    password: 1337
+    password: Proba22
     url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
   jpa:
     properties:
@@ -39,8 +39,8 @@ indexing-settings:
 #          name: dimonvideo.ru
           #1/5h 400
 #
-        - url:  https://et-cetera.ru/mobile/
-          name: et-cetera.ru
+#        - url:  https://et-cetera.ru/mobile/
+#          name: et-cetera.ru
 #
 #        - url: https://dombulgakova.ru/
 #          name: dombulgakova.ru
