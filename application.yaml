@@ -26,29 +26,25 @@ indexing-settings:
 #
 #        - url:  http://playback.ru/
 #          name: playback.ru
-#          ok 4k
 #
 #        - url: https://volochek.life/
 #          name: volochek.life
-#       4h 3825
 #
 #        - url: https://radiomv.ru/
 #          name: radiomv.ru
 #
 #        - url:  https://dimonvideo.ru/
 #          name: dimonvideo.ru
-          #1/5h 400
 #
 #        - url:  https://et-cetera.ru/mobile/
 #          name: et-cetera.ru
 #
 #        - url: https://dombulgakova.ru/
 #          name: dombulgakova.ru
-          #584 и завис
 #
 #        - url: https://www.svetlovka.ru/
 #          name: svetlovka.ru
-          #2k и завис
+
 #        - url: https://skillbox.ru/
 #          name: skillbox.ru
 
